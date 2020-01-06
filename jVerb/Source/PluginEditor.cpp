@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    This file was auto-generated!
-
-    It contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
@@ -85,7 +75,7 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
 
     addAndMakeVisible (predelaySlider);
     predelaySlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
-    predelaySlider.setRange(0.0f, 1.0f);
+    predelaySlider.setRange(0.0f, 250.0f);
     predelaySlider.setTextValueSuffix("dB");
     predelaySlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
@@ -96,7 +86,7 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
     addAndMakeVisible (decaySlider);
     decaySlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     decaySlider.setRange(0.0f, 1.0f);
-    decaySlider.setTextValueSuffix("dB");
+    decaySlider.setTextValueSuffix("ms");
     decaySlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(decayLabel);

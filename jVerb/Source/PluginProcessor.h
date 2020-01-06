@@ -11,6 +11,8 @@
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
+#include "delay.h"
+
 #define INPUT_ID "input"
 #define INPUT_NAME "Input"
 #define OUTPUT_ID "output"
@@ -85,6 +87,18 @@ public:
     float rawGainValue;
     AudioProcessorValueTreeState treeState;
     AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    
+    //==============================================================================
+    Delay preDelay1;
+    Delay preDelay2;
+  
+    //==============================================================================
+    float *writeBufferL;
+    float *writeBufferR;
+  
+    //==============================================================================
+    int oldNumSamples;
+    int oldSamplerate;
   
 private:
     //==============================================================================

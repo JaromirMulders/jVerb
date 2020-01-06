@@ -1,15 +1,6 @@
-/*
-  ==============================================================================
-
-    This file was auto-generated!
-
-    It contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "delay.h"
 
 //==============================================================================
 JVerbAudioProcessor::JVerbAudioProcessor()
@@ -25,6 +16,10 @@ JVerbAudioProcessor::JVerbAudioProcessor()
 treeState (*this, nullptr, "PARAMETER", createParameterLayout())
 #endif
 {
+  oldNumSamples = 0;
+  oldSamplerate = 0;
+  writeBufferL = new float[512];
+  writeBufferR = new float[512];
 }
 
 AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParameterLayout()
@@ -36,7 +31,7 @@ AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParamet
     auto colorParam = std::make_unique<AudioParameterFloat>(COLOR_ID, COLOR_NAME, 0.0f, 1.0f, 0.5f);
     auto diffusionParam = std::make_unique<AudioParameterFloat>(DIFFUSION_ID, DIFFUSION_NAME, 0.0f, 1.0f, 0.5f);
     auto dampingParam = std::make_unique<AudioParameterFloat>(DAMPING_ID, DAMPING_NAME, 0.0f, 1.0f, 0.5f);
-    auto predelayParam = std::make_unique<AudioParameterFloat>(PREDELAY_ID, PREDELAY_NAME, 0.0f, 1.0f, 0.5f);
+    auto predelayParam = std::make_unique<AudioParameterFloat>(PREDELAY_ID, PREDELAY_NAME, 0.0f, 250.0f, 50.0f);
     auto decayParam = std::make_unique<AudioParameterFloat>(DECAY_ID, DECAY_NAME, 0.0f, 1.0f, 0.5f);
     auto sizeParam = std::make_unique<AudioParameterFloat>(SIZE_ID, SIZE_NAME, 0.0f, 1.0f, 0.5f);
     auto drywetParam = std::make_unique<AudioParameterFloat>(DRYWET_ID, DRYWET_NAME, 0.0f, 1.0f, 0.5f);
@@ -167,34 +162,49 @@ void JVerbAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
       auto totalNumInputChannels  = getTotalNumInputChannels();
       auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-      // In case we have more outputs than inputs, this code clears any output
-      // channels that didn't contain input data, (because these aren't
-      // guaranteed to be empty - they may contain garbage).
-      // This is here to avoid people getting screaming feedback
-      // when they first compile a plugin, but obviously you don't need to keep
-      // this code if your algorithm always overwrites all the output channels.
-    
-    
-      for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-          buffer.clear (i, 0, buffer.getNumSamples());
-      // This is the place where you'd normally do the guts of your plugin's
-      // audio processing...
-      // Make sure to reset the state if your inner loop is processing
-      // the samples and the outer loop is handling the channels.
-      // Alternatively, you can process the samples with the channels
-      // interleaved by keeping the same state.
+      //auto sliderGainValue = treeState.getRawParameterValue(INPUT_ID);
+      auto preDelayValue = treeState.getRawParameterValue(PREDELAY_ID);
   
-      auto sliderGainValue = treeState.getRawParameterValue(INPUT_ID);
-  
-      for (int channel = 0; channel < totalNumInputChannels; ++channel)
-      {
-        auto* channelData = buffer.getWritePointer (channel);
+      int numSamples = buffer.getNumSamples();
+      int samplerate = getSampleRate();
+      //reset settings if samplerate or framesize changes
+      if(samplerate != oldSamplerate || numSamples != oldNumSamples){
+        preDelay1.setup(samplerate, numSamples);
+        preDelay2.setup(samplerate, numSamples);
 
-          // ..do something to the data...
-        for(int sample = 0; sample < buffer.getNumSamples(); sample++){
-          channelData[sample] = buffer.getSample(channel, sample) * *sliderGainValue;
-        }
+        float* newWriteBufferL = new float[numSamples];
+        float* tempBufferL = writeBufferL;
+        float* newWriteBufferR = new float[numSamples];
+        float* tempBufferR = writeBufferR;
+        
+        writeBufferL = newWriteBufferL;
+        delete[] tempBufferL;
+        writeBufferR = newWriteBufferR;
+        delete[] tempBufferR;
+        
+        oldSamplerate = samplerate;
+        oldNumSamples = numSamples;
+      }//if
+      
+      //clear buffers
+      for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i){
+          buffer.clear (i, 0, numSamples);
       }
+      
+      
+      auto* channelDataL = buffer.getWritePointer(0);
+      preDelay1.process_samples(channelDataL,writeBufferL,preDelayValue);
+      //write to left audio channel
+      for(int sample = 0; sample < numSamples; sample++){
+        channelDataL[sample] = writeBufferL[sample];//buffer.getSample(channel, sample) * *sliderGainValue;
+      }
+      //write to right audio channel
+      auto* channelDataR = buffer.getWritePointer(1);
+      preDelay2.process_samples(channelDataR,writeBufferR,preDelayValue);
+      for(int sample = 0; sample < numSamples; sample++){
+        channelDataR[sample] = writeBufferR[sample];//buffer.getSample(channel, sample) * *sliderGainValue;
+      }
+        
 }
 
 //==============================================================================
