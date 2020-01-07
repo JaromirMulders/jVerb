@@ -34,6 +34,8 @@ private:
     Slider outputSlider;
     Label  colorLabel;
     Slider colorSlider;
+    Label  colorGainLabel;
+    Slider colorGainSlider;
     Label  diffusionLabel;
     Slider diffusionSlider;
     Label  dampingLabel;
@@ -50,12 +52,14 @@ private:
     Slider lfofreqSlider;
     Label  lfodepthLabel;
     Slider lfodepthSlider;
+
   
     JVerbAudioProcessor& processor;
 public:
     std::unique_ptr <AudioProcessorValueTreeState::SliderAttachment> inputSliderVal;
     std::unique_ptr <AudioProcessorValueTreeState::SliderAttachment> outputSliderVal;
     std::unique_ptr <AudioProcessorValueTreeState::SliderAttachment> colorSliderVal;
+    std::unique_ptr <AudioProcessorValueTreeState::SliderAttachment> colorGainSliderVal;
     std::unique_ptr <AudioProcessorValueTreeState::SliderAttachment> diffusionSliderVal;
     std::unique_ptr <AudioProcessorValueTreeState::SliderAttachment> dampingSliderVal;
     std::unique_ptr <AudioProcessorValueTreeState::SliderAttachment> predelaySliderVal;

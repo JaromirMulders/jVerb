@@ -12,6 +12,7 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "delay.h"
+#include "allPass.h"
 
 #define INPUT_ID "input"
 #define INPUT_NAME "Input"
@@ -19,6 +20,8 @@
 #define OUTPUT_NAME "Output"
 #define COLOR_ID "color"
 #define COLOR_NAME "Color"
+#define COLORGAIN_ID "colorgain"
+#define COLORGAIN_NAME "Color Gain"
 #define DIFFUSION_ID "diffusion"
 #define DIFFUSION_NAME "Diffusion"
 #define DAMPING_ID "damping"
@@ -37,7 +40,10 @@
 #define LFODEPTH_NAME "Depth"
 #define LFOWAVEFORM_ID "lfowaveform"
 #define LFOWAVEFORM_NAME "Waveform"
+#define ZERO_ID "zero"
+#define ZERO_NAME " "
 
+#define cFdnChanAmnt 4
 
 //==============================================================================
 /**
@@ -83,20 +89,31 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     //==============================================================================
+    void onDAWChange(int samplerate, int numSamples);
+    float mix(float a, float b, float *m);
+  
+    //==============================================================================
 
     float rawGainValue;
     AudioProcessorValueTreeState treeState;
     AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     
     //==============================================================================
-    Delay preDelay1;
-    Delay preDelay2;
+    Delay   preDelay1;
+    Delay   preDelay2;
+    Delay   *delays;
+    allPass *allPassFilters;
+  
   
     //==============================================================================
+    
+    float **passBuffers;
     float *writeBufferL;
     float *writeBufferR;
   
     //==============================================================================
+    int samplerate;
+    int numSamples;
     int oldNumSamples;
     int oldSamplerate;
   
@@ -104,5 +121,4 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JVerbAudioProcessor)
  
-  
 };

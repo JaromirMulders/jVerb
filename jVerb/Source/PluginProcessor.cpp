@@ -16,10 +16,25 @@ JVerbAudioProcessor::JVerbAudioProcessor()
 treeState (*this, nullptr, "PARAMETER", createParameterLayout())
 #endif
 {
+  samplerate = 44100;
+  numSamples = 512;
   oldNumSamples = 0;
   oldSamplerate = 0;
-  writeBufferL = new float[512];
-  writeBufferR = new float[512];
+  writeBufferL = new float[numSamples];
+  writeBufferR = new float[numSamples];
+  passBuffers = new float*[cFdnChanAmnt*2];
+  
+  allPassFilters = new allPass[cFdnChanAmnt];
+  delays = new Delay[cFdnChanAmnt];
+  
+  for(int i = 0; i < cFdnChanAmnt*2; i++){
+    passBuffers[i] = new float[numSamples];
+    for(int j = 0; j < numSamples; j++){
+      passBuffers[i][j] = 0.;
+    }//for
+  }//for
+
+  
 }
 
 AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParameterLayout()
@@ -29,18 +44,21 @@ AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParamet
     auto inputParam = std::make_unique<AudioParameterFloat>(INPUT_ID, INPUT_NAME, 0.0f, 1.0f, 0.5f);
     auto outputParam = std::make_unique<AudioParameterFloat>(OUTPUT_ID, OUTPUT_NAME, 0.0f, 1.0f, 0.5f);
     auto colorParam = std::make_unique<AudioParameterFloat>(COLOR_ID, COLOR_NAME, 0.0f, 1.0f, 0.5f);
+    auto colorGainParam = std::make_unique<AudioParameterFloat>(COLORGAIN_ID, COLORGAIN_NAME, 0.0f, 1.0f, 0.1f);
     auto diffusionParam = std::make_unique<AudioParameterFloat>(DIFFUSION_ID, DIFFUSION_NAME, 0.0f, 1.0f, 0.5f);
     auto dampingParam = std::make_unique<AudioParameterFloat>(DAMPING_ID, DAMPING_NAME, 0.0f, 1.0f, 0.5f);
     auto predelayParam = std::make_unique<AudioParameterFloat>(PREDELAY_ID, PREDELAY_NAME, 0.0f, 250.0f, 50.0f);
     auto decayParam = std::make_unique<AudioParameterFloat>(DECAY_ID, DECAY_NAME, 0.0f, 1.0f, 0.5f);
     auto sizeParam = std::make_unique<AudioParameterFloat>(SIZE_ID, SIZE_NAME, 0.0f, 1.0f, 0.5f);
-    auto drywetParam = std::make_unique<AudioParameterFloat>(DRYWET_ID, DRYWET_NAME, 0.0f, 1.0f, 0.5f);
+    auto drywetParam = std::make_unique<AudioParameterFloat>(DRYWET_ID, DRYWET_NAME, 0.0f, 100.0f, 70.0f);
     auto lfofreqParam = std::make_unique<AudioParameterFloat>(LFOFREQ_ID, LFOFREQ_NAME, 0.0f, 1.0f, 0.5f);
     auto lfodepthParam = std::make_unique<AudioParameterFloat>(LFODEPTH_ID, LFODEPTH_NAME, 0.0f, 1.0f, 0.5f);
-  
+    auto zeroParam = std::make_unique<AudioParameterFloat>(ZERO_ID, ZERO_NAME, 0.0f, 0.0f, 0.0f);
+    
     params.push_back(std::move(inputParam));
     params.push_back(std::move(outputParam));
     params.push_back(std::move(colorParam));
+    params.push_back(std::move(colorGainParam));
     params.push_back(std::move(diffusionParam));
     params.push_back(std::move(dampingParam));
     params.push_back(std::move(predelayParam));
@@ -49,12 +67,20 @@ AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParamet
     params.push_back(std::move(drywetParam));
     params.push_back(std::move(lfofreqParam));
     params.push_back(std::move(lfodepthParam));
+    params.push_back(std::move(zeroParam));
   
     return { params.begin(), params.end() };
 }
 
 JVerbAudioProcessor::~JVerbAudioProcessor()
 {
+  delete []writeBufferL;
+  writeBufferL = NULL;
+  delete []writeBufferR;
+  writeBufferR = NULL;
+  for(int i = 0; i < cFdnChanAmnt*2; i++){
+    delete [] passBuffers[i];
+  }//for
 }
 
 //==============================================================================
@@ -162,49 +188,95 @@ void JVerbAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
       auto totalNumInputChannels  = getTotalNumInputChannels();
       auto totalNumOutputChannels = getTotalNumOutputChannels();
 
+      numSamples = buffer.getNumSamples();
+      samplerate = getSampleRate();
+      onDAWChange(samplerate,numSamples);
+
       //auto sliderGainValue = treeState.getRawParameterValue(INPUT_ID);
       auto preDelayValue = treeState.getRawParameterValue(PREDELAY_ID);
+      float nPreDelayVal = *preDelayValue*0.001*samplerate;
+      preDelayValue = &nPreDelayVal;
   
-      int numSamples = buffer.getNumSamples();
-      int samplerate = getSampleRate();
-      //reset settings if samplerate or framesize changes
-      if(samplerate != oldSamplerate || numSamples != oldNumSamples){
-        preDelay1.setup(samplerate, numSamples);
-        preDelay2.setup(samplerate, numSamples);
-
-        float* newWriteBufferL = new float[numSamples];
-        float* tempBufferL = writeBufferL;
-        float* newWriteBufferR = new float[numSamples];
-        float* tempBufferR = writeBufferR;
-        
-        writeBufferL = newWriteBufferL;
-        delete[] tempBufferL;
-        writeBufferR = newWriteBufferR;
-        delete[] tempBufferR;
-        
-        oldSamplerate = samplerate;
-        oldNumSamples = numSamples;
-      }//if
-      
+      auto colorValue = treeState.getRawParameterValue(COLOR_ID);
+      float nColorVal = *colorValue*0.15*samplerate;
+      colorValue = &nColorVal;
+  
+      auto colorGainValue = treeState.getRawParameterValue(COLORGAIN_ID);
+      float nColorGainVal = *colorGainValue;
+      colorGainValue = &nColorGainVal;
+  
+      auto sizeValue = treeState.getRawParameterValue(SIZE_ID);
+      float nSizeValue = *sizeValue*samplerate;
+      sizeValue = &nSizeValue;
+  
+      auto dryWetValue = treeState.getRawParameterValue(DRYWET_ID);
+      float nDryWetVal = *dryWetValue*0.01;
+      dryWetValue = &nDryWetVal;
+  
       //clear buffers
       for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i){
-          buffer.clear (i, 0, numSamples);
-      }
-      
+        buffer.clear (i, 0, numSamples);
+      }//for
       
       auto* channelDataL = buffer.getWritePointer(0);
-      preDelay1.process_samples(channelDataL,writeBufferL,preDelayValue);
+      preDelay1.process_samples(channelDataL,passBuffers[0],preDelayValue);
+      allPassFilters[0].process_samples(passBuffers[0], passBuffers[1], colorValue, colorGainValue);
+      allPassFilters[1].process_samples(passBuffers[0], passBuffers[2], colorValue, colorGainValue);
+      delays[0].process_samples(passBuffers[1], passBuffers[0], sizeValue);
+      delays[1].process_samples(passBuffers[2], writeBufferL, sizeValue);
+  
       //write to left audio channel
       for(int sample = 0; sample < numSamples; sample++){
-        channelDataL[sample] = writeBufferL[sample];//buffer.getSample(channel, sample) * *sliderGainValue;
-      }
-      //write to right audio channel
+        channelDataL[sample] = mix(channelDataL[sample],writeBufferL[sample],dryWetValue);
+      }//for
+  
       auto* channelDataR = buffer.getWritePointer(1);
-      preDelay2.process_samples(channelDataR,writeBufferR,preDelayValue);
+      preDelay2.process_samples(channelDataR,passBuffers[4],preDelayValue);
+      allPassFilters[2].process_samples(passBuffers[4], passBuffers[5], colorValue, colorGainValue);
+      allPassFilters[3].process_samples(passBuffers[4], passBuffers[6], colorValue, colorGainValue);
+      delays[2].process_samples(passBuffers[5], passBuffers[4], sizeValue);
+      delays[3].process_samples(passBuffers[6], writeBufferR, sizeValue);
+  
+      //write to right audio channel
       for(int sample = 0; sample < numSamples; sample++){
-        channelDataR[sample] = writeBufferR[sample];//buffer.getSample(channel, sample) * *sliderGainValue;
-      }
+        channelDataR[sample] = mix(channelDataR[sample],writeBufferR[sample],dryWetValue);
+      }//for
         
+}
+
+float JVerbAudioProcessor::mix(float a, float b, float *m){
+  //retrun linear interpolated value of two numbers
+  return a * (1.-*m) + b * *m;
+}
+
+void JVerbAudioProcessor::onDAWChange(int samplerate, int numSamples){
+  //if samplerate or framesize changes reeinitialize buffers and other stuff that depends on framesize or samplerate
+  if(samplerate != oldSamplerate || numSamples != oldNumSamples){
+    preDelay1.setup(samplerate, numSamples);
+    preDelay2.setup(samplerate, numSamples);
+    
+    delete []writeBufferL;
+    delete []writeBufferR;
+    writeBufferL = new float[numSamples];
+    writeBufferR = new float[numSamples];
+
+    for(int i = 0; i < cFdnChanAmnt*2; i++){
+      delete [] passBuffers[i];
+    }//for
+    
+    passBuffers = new float*[cFdnChanAmnt*2];
+    for(int i = 0; i < cFdnChanAmnt*2; i++){
+      passBuffers[i] = new float[numSamples];
+      allPassFilters[i/2].setup(samplerate,numSamples);
+      delays[i/2].setup(samplerate, numSamples);
+      for(int j = 0; j < numSamples; j++){
+        passBuffers[i][j] = 0.;
+      }//for
+    }//for
+
+    oldSamplerate = samplerate;
+    oldNumSamples = numSamples;
+  }//if
 }
 
 //==============================================================================

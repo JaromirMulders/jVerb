@@ -1,28 +1,25 @@
 #pragma once
 #include "../JuceLibraryCode/JuceHeader.h"
 
-class Delay
+class allPass
 {
 public:
-  Delay();
-  ~Delay();
-
-  
+  allPass();
+  ~allPass();
+  void process_samples(float *samples,float *output,float *color, float *colorGain);
   void setup(int cSamplerate, int cNumSamples);
-  void process_samples(float *samples, float *output, float *delayTime);
   
 private:
   long nextPowerOfTwo(long n);
-  
+
   long tapin;
   long tapout;
   long delayBufferSize;
   long delayBufferMask;
   
   float* delayBuffer;
-
+  
   //==============================================================================
   int samplerate;
   int numSamples;
-  
 };

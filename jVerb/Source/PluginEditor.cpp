@@ -9,11 +9,12 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
     // editor's size to whatever you need it to be.
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (750, 500);
+    setSize (1000, 500);
 
     inputSliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, INPUT_ID, inputSlider);
     outputSliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, OUTPUT_ID, outputSlider);
     colorSliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, COLOR_ID, colorSlider);
+    colorGainSliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, COLORGAIN_ID, colorGainSlider);
     diffusionSliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, DIFFUSION_ID, diffusionSlider);
     dampingSliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, DAMPING_ID, dampingSlider);
     predelaySliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, PREDELAY_ID, predelaySlider);
@@ -46,17 +47,24 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
     addAndMakeVisible (colorSlider);
     colorSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     colorSlider.setRange(0.0f, 1.0f);
-    colorSlider.setTextValueSuffix("dB");
     colorSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(colorLabel);
     colorLabel.setText (COLOR_NAME, dontSendNotification);
     colorLabel.attachToComponent (&colorSlider, false);
 
+    addAndMakeVisible (colorGainSlider);
+    colorGainSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
+    colorGainSlider.setRange(0.0f, 1.0f);
+    colorGainSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
+
+    addAndMakeVisible(colorGainLabel);
+    colorGainLabel.setText (COLORGAIN_NAME, dontSendNotification);
+    colorGainLabel.attachToComponent (&colorGainSlider, false);
+  
     addAndMakeVisible (diffusionSlider);
     diffusionSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     diffusionSlider.setRange(0.0f, 1.0f);
-    diffusionSlider.setTextValueSuffix("dB");
     diffusionSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(diffusionLabel);
@@ -76,7 +84,7 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
     addAndMakeVisible (predelaySlider);
     predelaySlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     predelaySlider.setRange(0.0f, 250.0f);
-    predelaySlider.setTextValueSuffix("dB");
+    predelaySlider.setTextValueSuffix("ms");
     predelaySlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(predelayLabel);
@@ -86,7 +94,7 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
     addAndMakeVisible (decaySlider);
     decaySlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     decaySlider.setRange(0.0f, 1.0f);
-    decaySlider.setTextValueSuffix("ms");
+    decaySlider.setTextValueSuffix("db");
     decaySlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(decayLabel);
@@ -105,8 +113,8 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
 
     addAndMakeVisible (drywetSlider);
     drywetSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
-    drywetSlider.setRange(0.0f, 1.0f);
-    drywetSlider.setTextValueSuffix("dB");
+    drywetSlider.setRange(0.0f, 100.0f);
+    drywetSlider.setTextValueSuffix("%");
     drywetSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(drywetLabel);
@@ -148,33 +156,35 @@ void JVerbAudioProcessorEditor::paint (Graphics& g)
 
 void JVerbAudioProcessorEditor::resized()
 {
-    int xPos = 30;
-    int xSpace = 60;
+    int xPos = 40;
+    int xSpace = 75;
     int sHeight = getHeight() - 60;
-
+    int xWidth = 75;
   
     //x,y,width,heigth
-    inputSlider.setBounds(xPos, 30, 50, sHeight);
+    inputSlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    outputSlider.setBounds(xPos, 30, 50, sHeight);
+    outputSlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    colorSlider.setBounds(xPos, 30, 50, sHeight);
+    colorSlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    diffusionSlider.setBounds(xPos, 30, 50, sHeight);
+    colorGainSlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    dampingSlider.setBounds(xPos, 30, 50, sHeight);
+    diffusionSlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    predelaySlider.setBounds(xPos, 30, 50, sHeight);
+    dampingSlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    decaySlider.setBounds(xPos, 30, 50, sHeight);
+    predelaySlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    sizeSlider.setBounds(xPos, 30, 50, sHeight);
+    decaySlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    drywetSlider.setBounds(xPos, 30, 50, sHeight);
+    sizeSlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    lfofreqSlider.setBounds(xPos, 30, 50, sHeight);
+    drywetSlider.setBounds(xPos, 30, xWidth, sHeight);
     xPos+=xSpace;
-    lfodepthSlider.setBounds(xPos, 30, 50, sHeight);
+    lfofreqSlider.setBounds(xPos, 30, xWidth, sHeight);
+    xPos+=xSpace;
+    lfodepthSlider.setBounds(xPos, 30, xWidth, sHeight);
 
 }
   
