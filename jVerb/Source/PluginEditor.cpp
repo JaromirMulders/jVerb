@@ -73,8 +73,8 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
 
     addAndMakeVisible (dampingSlider);
     dampingSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
-    dampingSlider.setRange(0.0f, 1.0f);
-    dampingSlider.setTextValueSuffix("dB");
+    dampingSlider.setRange(10.0f, 20000.0f);
+    dampingSlider.setTextValueSuffix("Hz");
     dampingSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(dampingLabel);

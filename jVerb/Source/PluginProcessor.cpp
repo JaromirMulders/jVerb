@@ -26,11 +26,14 @@ treeState (*this, nullptr, "PARAMETER", createParameterLayout())
   
   allPassFilters = new allPass[cFdnChanAmnt];
   delays = new Delay[cFdnChanAmnt];
+  ladderFilters = new LadderFilter[cFdnChanAmnt];
   
   for(int i = 0; i < cFdnChanAmnt*2; i++){
     passBuffers[i] = new float[numSamples];
     for(int j = 0; j < numSamples; j++){
       passBuffers[i][j] = 0.;
+      writeBufferL[j] = 0.;
+      writeBufferR[j] = 0.;
     }//for
   }//for
 
@@ -46,7 +49,7 @@ AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParamet
     auto colorParam = std::make_unique<AudioParameterFloat>(COLOR_ID, COLOR_NAME, 0.0f, 1.0f, 0.5f);
     auto colorGainParam = std::make_unique<AudioParameterFloat>(COLORGAIN_ID, COLORGAIN_NAME, 0.0f, 1.0f, 0.1f);
     auto diffusionParam = std::make_unique<AudioParameterFloat>(DIFFUSION_ID, DIFFUSION_NAME, 0.0f, 1.0f, 0.5f);
-    auto dampingParam = std::make_unique<AudioParameterFloat>(DAMPING_ID, DAMPING_NAME, 0.0f, 1.0f, 0.5f);
+    auto dampingParam = std::make_unique<AudioParameterFloat>(DAMPING_ID, DAMPING_NAME, 10.0f, 20000.0f, 0.5f);
     auto predelayParam = std::make_unique<AudioParameterFloat>(PREDELAY_ID, PREDELAY_NAME, 0.0f, 250.0f, 50.0f);
     auto decayParam = std::make_unique<AudioParameterFloat>(DECAY_ID, DECAY_NAME, 0.0f, 1.0f, 0.5f);
     auto sizeParam = std::make_unique<AudioParameterFloat>(SIZE_ID, SIZE_NAME, 0.0f, 1.0f, 0.5f);
@@ -212,6 +215,14 @@ void JVerbAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
       auto dryWetValue = treeState.getRawParameterValue(DRYWET_ID);
       float nDryWetVal = *dryWetValue*0.01;
       dryWetValue = &nDryWetVal;
+ 
+      auto dampingValue = treeState.getRawParameterValue(DAMPING_ID);
+      float nDampingValue = tan(cPi * (*dampingValue * 1./samplerate));
+      dampingValue = &nDampingValue;
+
+      auto decayValue = treeState.getRawParameterValue(DECAY_ID);
+      float nDecayValue = *decayValue;
+      decayValue = &nDecayValue;
   
       //clear buffers
       for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i){
@@ -222,23 +233,41 @@ void JVerbAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
       preDelay1.process_samples(channelDataL,passBuffers[0],preDelayValue);
       allPassFilters[0].process_samples(passBuffers[0], passBuffers[1], colorValue, colorGainValue);
       allPassFilters[1].process_samples(passBuffers[0], passBuffers[2], colorValue, colorGainValue);
-      delays[0].process_samples(passBuffers[1], passBuffers[0], sizeValue);
-      delays[1].process_samples(passBuffers[2], writeBufferL, sizeValue);
-  
-      //write to left audio channel
-      for(int sample = 0; sample < numSamples; sample++){
-        channelDataL[sample] = mix(channelDataL[sample],writeBufferL[sample],dryWetValue);
-      }//for
+      ladderFilters[0].process_samples(passBuffers[1],passBuffers[0],dampingValue);
+      ladderFilters[1].process_samples(passBuffers[2],passBuffers[3],dampingValue);
+      delays[0].process_samples(passBuffers[0], passBuffers[1], sizeValue);
+      delays[1].process_samples(passBuffers[3], passBuffers[2], sizeValue);
   
       auto* channelDataR = buffer.getWritePointer(1);
       preDelay2.process_samples(channelDataR,passBuffers[4],preDelayValue);
       allPassFilters[2].process_samples(passBuffers[4], passBuffers[5], colorValue, colorGainValue);
       allPassFilters[3].process_samples(passBuffers[4], passBuffers[6], colorValue, colorGainValue);
-      delays[2].process_samples(passBuffers[5], passBuffers[4], sizeValue);
-      delays[3].process_samples(passBuffers[6], writeBufferR, sizeValue);
+      ladderFilters[2].process_samples(passBuffers[5],passBuffers[4], dampingValue);
+      ladderFilters[3].process_samples(passBuffers[6],passBuffers[7], dampingValue);
+      delays[2].process_samples(passBuffers[4], passBuffers[5], sizeValue);
+      delays[3].process_samples(passBuffers[7], passBuffers[6], sizeValue);
+
   
+      //hardmax matrix
+      for(int sample = 0; sample < numSamples; sample++){
+        passBuffers[1][sample]-=passBuffers[2][sample];
+        passBuffers[1][sample]+=passBuffers[2][sample];
+        passBuffers[5][sample]-=passBuffers[6][sample];
+        passBuffers[5][sample]+=passBuffers[6][sample];
+        passBuffers[1][sample]-=passBuffers[5][sample];
+        passBuffers[1][sample]+=passBuffers[5][sample];
+        passBuffers[2][sample]-=passBuffers[6][sample];
+        passBuffers[2][sample]+=passBuffers[6][sample];
+      }
+  
+      //write to left audio channel
+      for(int sample = 0; sample < numSamples; sample++){
+        writeBufferL[sample] = passBuffers[0][sample] + passBuffers[3][sample];
+        channelDataL[sample] = mix(channelDataL[sample],writeBufferL[sample],dryWetValue);
+      }//for
       //write to right audio channel
       for(int sample = 0; sample < numSamples; sample++){
+        writeBufferR[sample] = passBuffers[4][sample] + passBuffers[7][sample];
         channelDataR[sample] = mix(channelDataR[sample],writeBufferR[sample],dryWetValue);
       }//for
         
@@ -269,8 +298,11 @@ void JVerbAudioProcessor::onDAWChange(int samplerate, int numSamples){
       passBuffers[i] = new float[numSamples];
       allPassFilters[i/2].setup(samplerate,numSamples);
       delays[i/2].setup(samplerate, numSamples);
+      ladderFilters[i/2].setup(samplerate, numSamples);
       for(int j = 0; j < numSamples; j++){
         passBuffers[i][j] = 0.;
+        writeBufferL[j] = 0.;
+        writeBufferR[j] = 0.;
       }//for
     }//for
 

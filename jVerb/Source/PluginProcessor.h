@@ -1,18 +1,10 @@
-/*
-  ==============================================================================
-
-    This file was auto-generated!
-
-    It contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
+#include "math.h"
 #include "delay.h"
 #include "allPass.h"
+#include "ladderFilter.h"
 
 #define INPUT_ID "input"
 #define INPUT_NAME "Input"
@@ -44,6 +36,8 @@
 #define ZERO_NAME " "
 
 #define cFdnChanAmnt 4
+#define cPi          3.14159265359
+#define cTwoPi       6.28318530718
 
 //==============================================================================
 /**
@@ -103,7 +97,7 @@ public:
     Delay   preDelay2;
     Delay   *delays;
     allPass *allPassFilters;
-  
+    LadderFilter *ladderFilters;
   
     //==============================================================================
     
