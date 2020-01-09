@@ -123,8 +123,8 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
 
     addAndMakeVisible (lfofreqSlider);
     lfofreqSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
-    lfofreqSlider.setRange(0.0f, 1.0f);
-    lfofreqSlider.setTextValueSuffix("dB");
+    lfofreqSlider.setRange(0.01f, 20.0f);
+    lfofreqSlider.setTextValueSuffix("Hz");
     lfofreqSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(lfofreqLabel);
@@ -134,7 +134,6 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
     addAndMakeVisible (lfodepthSlider);
     lfodepthSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     lfodepthSlider.setRange(0.0f, 1.0f);
-    lfodepthSlider.setTextValueSuffix("dB");
     lfodepthSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
 
     addAndMakeVisible(lfodepthLabel);

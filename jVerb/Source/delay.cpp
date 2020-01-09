@@ -6,7 +6,7 @@ Delay::Delay(){
   
   samplerate = 44100;
   numSamples = 512;
-  delayBufferSize = nextPowerOfTwo(samplerate);
+  delayBufferSize = nextPowerOfTwo(samplerate/2);
   delayBufferMask = delayBufferSize-1;
 
   delayBuffer = new float[delayBufferSize];
@@ -48,11 +48,13 @@ void Delay::setup(int cSamplerate, int cNumSamples){
   
 }
 
-void Delay::process_samples(float *samples, float *output, float *delayTime){
+void Delay::process_samples(float *samples, float *output,float *lfo, float *delayTime){
   
   int iDelaytime = (int)(*delayTime);
   
   for(auto i = 0; i < numSamples; i++){
+    
+    iDelaytime+=lfo[i];
     
     tapin++;
     tapin&=delayBufferMask;

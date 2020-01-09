@@ -5,6 +5,9 @@
 #include "delay.h"
 #include "allPass.h"
 #include "ladderFilter.h"
+#include "onePole.h"
+#include "onePoleParam.h"
+#include "LFO.h"
 
 #define INPUT_ID "input"
 #define INPUT_NAME "Input"
@@ -98,19 +101,29 @@ public:
     Delay   *delays;
     allPass *allPassFilters;
     LadderFilter *ladderFilters;
+    LFO lfo;
+    OnePole lfoSlide;
   
     //==============================================================================
-    
     float **passBuffers;
+    float **hardmaxBuffer;
+    float *lfoPassBuffer;
+    float *lfoSizeBuffer;
+    float *vInputL;
+    float *vInputR;
     float *writeBufferL;
     float *writeBufferR;
-  
+    float *emptyBuffer;
+    
     //==============================================================================
     int samplerate;
     int numSamples;
     int oldNumSamples;
     int oldSamplerate;
-  
+    
+    //==============================================================================
+    
+    void scaleParams();
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JVerbAudioProcessor)

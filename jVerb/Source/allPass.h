@@ -6,7 +6,7 @@ class allPass
 public:
   allPass();
   ~allPass();
-  void process_samples(float *samples,float *output,float *color, float *colorGain);
+  void process_samples(float *samples,float *output, float *lfo,float *color, float *colorGain);
   void setup(int cSamplerate, int cNumSamples);
   
 private:
