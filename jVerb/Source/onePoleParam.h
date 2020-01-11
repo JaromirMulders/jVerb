@@ -7,7 +7,7 @@ public:
   ~OnePoleParam();
   
   void setup(int cSamplerate, int cNumSamples);
-  void process_samples(float samples, float output,float *frequency);
+  void process_samples(float &paramater, float frequency);
   
 private:
 

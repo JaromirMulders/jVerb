@@ -90,11 +90,13 @@ public:
     float mix(float a, float b, float *m);
   
     //==============================================================================
-
-    float rawGainValue;
     AudioProcessorValueTreeState treeState;
     AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    
+ 
+    //==============================================================================
+    void doSetup();
+    void recreateBuffers();
+  
     //==============================================================================
     Delay   preDelay1;
     Delay   preDelay2;
@@ -114,7 +116,7 @@ public:
     float *writeBufferL;
     float *writeBufferR;
     float *emptyBuffer;
-    
+  
     //==============================================================================
     int samplerate;
     int numSamples;

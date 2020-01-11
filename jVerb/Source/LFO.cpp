@@ -4,6 +4,13 @@ LFO::LFO() //constructor
 {
   for(int i = 0; i < cTableSize; i++){ //fill waveTable with sinewave
     waveTable[i] = sin((float)i/(float)cTableSize * cTwoPi);
+    /*
+    float f = 1.;
+    if(((float)i/(float)cTableSize) > 0.5){
+      f = -1.;
+    }
+    waveTable[i] = f;
+    */
   }
   
   tableMask = cTableSize-1;
@@ -12,6 +19,8 @@ LFO::LFO() //constructor
   index2 = 0;
   phasor = 0;
   frac   = 0;
+  wave   = 0.;
+  history = 0.;
   
 }
 
@@ -48,9 +57,15 @@ void LFO::oscGen(float *passOutput,float *sizeOutput ,float *fq, float *depth){
     
     fqCounter += frac;
     
+    //one pole filter lfo
+    //float lfoOut = history * 0.999 + wave * 0.001;
+    //history = lfoOut;
+    
     wave*= *depth;
-    passOutput[i] = wave;// * (samplerate*0.015);
-    sizeOutput[i] = wave;// * (samplerate*0.25);
+    
+    //send to output and multiply by the buffersize of the allpass filters and delays
+    passOutput[i] = wave * ((float)samplerate * 0.015);
+    sizeOutput[i] = wave * ((float)samplerate * 0.25);
   }
   
 }

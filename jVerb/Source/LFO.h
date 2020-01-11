@@ -1,9 +1,11 @@
 #pragma once
 #include "math.h"
+#include "onePole.h"
 
-#define cTableSize 512
+#define cTableSize   512
 #define cPi          3.14159265359
 #define cTwoPi       6.28318530718
+#define smoothing    0.01
 
 class LFO
 {
@@ -25,8 +27,10 @@ private:
   float phasor;
   float wave;
   int tableMask;
+  float history;
   
   int samplerate;
   int numSamples;
+  
   
 }; //

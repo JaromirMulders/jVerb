@@ -15,9 +15,9 @@ void OnePole::setup(int cSamplerate, int cNumSamples){
 
 }
 
-void OnePole::process_samples(float *samples, float *output, float *frequency){
+void OnePole::process_samples(float *samples, float frequency){
   for(auto i = 0; i < numSamples; i++){
-    output[i] = history * (1. - *frequency) + samples[i] * *frequency;
-    history = output[i];
+    samples[i] = history * (1. - frequency) + samples[i] * frequency;
+    history = samples[i];
   }//for
 }

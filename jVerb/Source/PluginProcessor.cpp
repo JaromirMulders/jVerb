@@ -20,35 +20,11 @@ treeState (*this, nullptr, "PARAMETER", createParameterLayout())
   numSamples = 512;
   oldNumSamples = 0;
   oldSamplerate = 0;
-  lfoPassBuffer = new float[numSamples];
-  lfoSizeBuffer = new float[numSamples];
-  writeBufferL = new float[numSamples];
-  writeBufferR = new float[numSamples];
-  vInputR = new float[numSamples];
-  vInputL = new float[numSamples];
-  emptyBuffer = new float[numSamples];
-  passBuffers = new float*[cFdnChanAmnt*2];
-  hardmaxBuffer = new float*[cFdnChanAmnt];
-  
+
   allPassFilters = new allPass[cFdnChanAmnt];
   delays = new Delay[cFdnChanAmnt];
   ladderFilters = new LadderFilter[cFdnChanAmnt];
-  
-  for(int i = 0; i < cFdnChanAmnt*2; i++){
-    passBuffers[i]   = new float[numSamples];
-    hardmaxBuffer[i/2] = new float[numSamples];
-    for(int j = 0; j < numSamples; j++){
-      passBuffers[i][j] = 0.;
-      hardmaxBuffer[i/2][j] = 0.;
-      writeBufferL[j] = 0.;
-      writeBufferR[j] = 0.;
-      vInputR[i] = 0.;
-      vInputL[i] = 0.;
-      emptyBuffer[i] = 0.;
-    }//for
-  }//for
-  
-  
+  recreateBuffers();
 }
 
 AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParameterLayout()
@@ -68,7 +44,7 @@ AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParamet
     auto lfofreqParam = std::make_unique<AudioParameterFloat>(LFOFREQ_ID, LFOFREQ_NAME, 0.1f, 20.0f, 10.0f);
     auto lfodepthParam = std::make_unique<AudioParameterFloat>(LFODEPTH_ID, LFODEPTH_NAME, 0.0f, 1.0f, 0.5f);
     auto zeroParam = std::make_unique<AudioParameterFloat>(ZERO_ID, ZERO_NAME, 0.0f, 0.0f, 0.0f);
-    
+  
     params.push_back(std::move(inputParam));
     params.push_back(std::move(outputParam));
     params.push_back(std::move(colorParam));
@@ -82,6 +58,8 @@ AudioProcessorValueTreeState::ParameterLayout JVerbAudioProcessor::createParamet
     params.push_back(std::move(lfofreqParam));
     params.push_back(std::move(lfodepthParam));
     params.push_back(std::move(zeroParam));
+    
+    
   
     return { params.begin(), params.end() };
 }
@@ -234,22 +212,22 @@ void JVerbAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
   
       //auto sliderGainValue = treeState.getRawParameterValue(INPUT_ID);
       auto preDelayValue = treeState.getRawParameterValue(PREDELAY_ID);
-      float nPreDelayVal = *preDelayValue*0.001*samplerate;
+      float nPreDelayVal = *preDelayValue*0.001 * (float)samplerate;
   
       auto colorValue = treeState.getRawParameterValue(COLOR_ID);
-      float nColorVal1 = *colorValue*0.015*samplerate;
-      float nColorVal2 = nColorVal1 * 0.8876;//* 0.932;
-      float nColorVal3 = nColorVal1 * 0.61234;//* 0.865;
-      float nColorVal4 = nColorVal1 * 0.45432;//* 0.789;
+      float nColorVal1 = *colorValue* 0.015 * (float)samplerate;
+      float nColorVal2 = nColorVal1 * 0.932;
+      float nColorVal3 = nColorVal1 * 0.865;
+      float nColorVal4 = nColorVal1 * 0.789;
   
       auto colorGainValue = treeState.getRawParameterValue(COLORGAIN_ID);
       float nColorGainVal = *colorGainValue;
-  
+      
       auto sizeValue = treeState.getRawParameterValue(SIZE_ID);
-      float nSizeValue1 = *sizeValue*0.25*samplerate;
-      float nSizeValue2 = nSizeValue1 * 0.887123;//0.976;
-      float nSizeValue3 = nSizeValue1 * 0.69877;//0.854;
-      float nSizeValue4 = nSizeValue1 * 0.48887;//0.784;
+      float nSizeValue1 = *sizeValue * 0.25 * (float)samplerate;
+      float nSizeValue2 = nSizeValue1 * 0.976;
+      float nSizeValue3 = nSizeValue1 * 0.854;
+      float nSizeValue4 = nSizeValue1 * 0.784;
   
       auto dryWetValue = treeState.getRawParameterValue(DRYWET_ID);
       float nDryWetVal = *dryWetValue*0.01;
@@ -263,8 +241,9 @@ void JVerbAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
       auto lfoFreq = treeState.getRawParameterValue(LFOFREQ_ID);
       float nLfoFreqVal = *lfoFreq;
  
-       auto lfoDepth = treeState.getRawParameterValue(LFODEPTH_ID);
-       float nLfoDepth = *lfoDepth;
+      auto lfoDepth = treeState.getRawParameterValue(LFODEPTH_ID);
+      float nLfoDepth = *lfoDepth;
+      nLfoDepth = nLfoDepth*nLfoDepth * 0.1;
   
       //clear buffers
       for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i){
@@ -283,33 +262,33 @@ void JVerbAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
       ladderFilters[1].process_samples(hardmaxBuffer[1],passBuffers[3],&nDampingVal);
       allPassFilters[0].process_samples(passBuffers[1], passBuffers[0], lfoPassBuffer, &nColorVal1, &nColorGainVal);
       allPassFilters[1].process_samples(passBuffers[3], passBuffers[2], lfoPassBuffer, &nColorVal2, &nColorGainVal);
-      delays[0].process_samples(passBuffers[0], passBuffers[1], emptyBuffer, &nSizeValue1);
-      delays[1].process_samples(passBuffers[2], passBuffers[3], emptyBuffer, &nSizeValue2);
+      delays[0].process_samples(passBuffers[0], passBuffers[1], lfoSizeBuffer, &nSizeValue1);
+      delays[1].process_samples(passBuffers[2], passBuffers[3], lfoSizeBuffer, &nSizeValue2);
 
       ladderFilters[2].process_samples(hardmaxBuffer[2],passBuffers[5], &nDampingVal);
       ladderFilters[3].process_samples(hardmaxBuffer[3],passBuffers[7], &nDampingVal);
       allPassFilters[2].process_samples(passBuffers[5], passBuffers[4], lfoPassBuffer, &nColorVal3, &nColorGainVal);
       allPassFilters[3].process_samples(passBuffers[7], passBuffers[6], lfoPassBuffer, &nColorVal4, &nColorGainVal);
-      delays[2].process_samples(passBuffers[4], passBuffers[5], emptyBuffer, &nSizeValue3);
-      delays[3].process_samples(passBuffers[6], passBuffers[7], emptyBuffer, &nSizeValue4);
+      delays[2].process_samples(passBuffers[4], passBuffers[5], lfoSizeBuffer, &nSizeValue3);
+      delays[3].process_samples(passBuffers[6], passBuffers[7], lfoSizeBuffer, &nSizeValue4);
   
       for(int sample = 0; sample < numSamples; sample++){
         float hardmax1_0 = passBuffers[1][sample] - passBuffers[2][sample];
         float hardmax2_0 = passBuffers[1][sample] + passBuffers[2][sample];
         float hardmax3_0 = passBuffers[5][sample] - passBuffers[6][sample];
         float hardmax4_0 = passBuffers[5][sample] + passBuffers[6][sample];
-        hardmaxBuffer[0][sample] = vInputL[sample] * nInputVal + tanh(hardmax1_0 - hardmax3_0) * nDecayVal;
-        hardmaxBuffer[2][sample] = tanh(hardmax1_0 + hardmax3_0) * nDecayVal;
-        hardmaxBuffer[1][sample] = tanh(hardmax2_0 - hardmax4_0) * nDecayVal;
-        hardmaxBuffer[3][sample] = vInputR[sample] * nInputVal + tanh(hardmax2_0 + hardmax4_0) * nDecayVal;
+        hardmaxBuffer[0][sample] = vInputL[sample] * nInputVal + (hardmax1_0 - hardmax3_0) * nDecayVal;
+        hardmaxBuffer[2][sample] = (hardmax1_0 + hardmax3_0) * nDecayVal;
+        hardmaxBuffer[1][sample] = (hardmax2_0 - hardmax4_0) * nDecayVal;
+        hardmaxBuffer[3][sample] = vInputR[sample] * nInputVal + (hardmax2_0 + hardmax4_0) * nDecayVal;
         
         writeBufferL[sample] = passBuffers[1][sample] + passBuffers[3][sample];
         channelDataL[sample] = mix(channelDataL[sample],writeBufferL[sample],&nDryWetVal) * nOutputVal;
 
         writeBufferR[sample] = passBuffers[5][sample] + passBuffers[7][sample];
         channelDataR[sample] = mix(channelDataR[sample],writeBufferR[sample],&nDryWetVal) * nOutputVal;
-      }//for
         
+      }//for
 }
 
 float JVerbAudioProcessor::mix(float a, float b, float *m){
@@ -323,7 +302,6 @@ void JVerbAudioProcessor::onDAWChange(int samplerate, int numSamples){
     preDelay1.setup(samplerate, numSamples);
     preDelay2.setup(samplerate, numSamples);
     lfo.setup(samplerate, numSamples);
-    lfoSlide.setup(samplerate, numSamples);
     
     delete []lfoPassBuffer;
     delete []lfoSizeBuffer;
@@ -332,45 +310,54 @@ void JVerbAudioProcessor::onDAWChange(int samplerate, int numSamples){
     delete []vInputR;
     delete []vInputL;
     delete []emptyBuffer;
-    
-    vInputR = new float[numSamples];
-    vInputL = new float[numSamples];
-    lfoPassBuffer = new float[numSamples];
-    lfoSizeBuffer = new float[numSamples];
-    writeBufferL = new float[numSamples];
-    writeBufferR = new float[numSamples];
-    emptyBuffer = new float[numSamples];
-    
+
     for(int i = 0; i < cFdnChanAmnt*2; i++){
       delete [] passBuffers[i];
     }//for
     for(int i = 0; i < cFdnChanAmnt; i++){
       delete [] hardmaxBuffer[i];
     }//for
-    
-    passBuffers = new float*[cFdnChanAmnt*2];
-    hardmaxBuffer = new float*[cFdnChanAmnt];
-    for(int i = 0; i < cFdnChanAmnt*2; i++){
-      passBuffers[i] = new float[numSamples];
-      hardmaxBuffer[i/2] = new float[numSamples];
-      allPassFilters[i/2].setup(samplerate,numSamples);
-      delays[i/2].setup(samplerate, numSamples);
-      ladderFilters[i/2].setup(samplerate, numSamples);
-      for(int j = 0; j < numSamples; j++){
-        passBuffers[i][j] = 0.;
-        hardmaxBuffer[i/2][j] = 0.;
-        writeBufferL[j] = 0.;
-        writeBufferR[j] = 0.;
-        vInputL[i] = 0.;
-        vInputR[i] = 0.;
-        emptyBuffer[i] = 0.;
-      }//for
-    }//for
+
+    recreateBuffers();
 
     oldSamplerate = samplerate;
     oldNumSamples = numSamples;
   }//if
 }
+
+void JVerbAudioProcessor::recreateBuffers(){
+  vInputR = new float[numSamples];
+  vInputL = new float[numSamples];
+  lfoPassBuffer = new float[numSamples];
+  lfoSizeBuffer = new float[numSamples];
+  writeBufferL = new float[numSamples];
+  writeBufferR = new float[numSamples];
+  emptyBuffer = new float[numSamples];
+  
+  passBuffers = new float*[cFdnChanAmnt*2];
+  hardmaxBuffer = new float*[cFdnChanAmnt];
+  for(int i = 0; i < cFdnChanAmnt*2; i++){
+    passBuffers[i] = new float[numSamples];
+    hardmaxBuffer[i/2] = new float[numSamples];
+    allPassFilters[i/2].setup(samplerate,numSamples);
+    delays[i/2].setup(samplerate, numSamples);
+    ladderFilters[i/2].setup(samplerate, numSamples);
+    for(int j = 0; j < numSamples; j++){
+      passBuffers[i][j] = 0.;
+      hardmaxBuffer[i/2][j] = 0.;
+      writeBufferL[j] = 0.;
+      writeBufferR[j] = 0.;
+      vInputL[i] = 0.;
+      vInputR[i] = 0.;
+      emptyBuffer[i] = 0.;
+      lfoPassBuffer[i] = 0.;
+      lfoSizeBuffer[i] = 0.;
+      
+    }//for
+  }//for
+}
+
+
 
 //==============================================================================
 bool JVerbAudioProcessor::hasEditor() const
@@ -396,7 +383,6 @@ void JVerbAudioProcessor::getStateInformation (MemoryBlock& destData)
 
 void JVerbAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-
   
   // You should use this method to restore your parameters from this memory block,
   // whose contents will have been created by the getStateInformation() call.
