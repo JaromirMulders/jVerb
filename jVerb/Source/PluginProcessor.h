@@ -127,6 +127,8 @@ public:
     
     void scaleParams();
 private:
+  
+    void processSamples();
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JVerbAudioProcessor)
  

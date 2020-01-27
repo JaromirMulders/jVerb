@@ -9,6 +9,10 @@ Delay::Delay(){
   delayBufferSize = nextPowerOfTwo(samplerate);
   delayBufferMask = delayBufferSize-1;
 
+  dcBlock = 0.;
+  dc1 = 0.;
+  dc2 = 0.;
+  
   delayBuffer = new float[delayBufferSize];
   for(auto i = 0; i < delayBufferSize; i++){
     delayBuffer[i] = 0.0f;
@@ -39,7 +43,6 @@ void Delay::setup(int cSamplerate, int cNumSamples){
   delayBufferSize = nextPowerOfTwo(samplerate);
   delayBufferMask = delayBufferSize-1;
   
-  delete[] delayBuffer;
   delayBuffer = new float[delayBufferSize];
   
   for(auto i = 0; i < delayBufferSize; i++){
@@ -56,12 +59,17 @@ void Delay::process_samples(float *samples, float *output,float *lfo, float *del
     tapin&=delayBufferMask;
     
     //set delay time
-    tapout = tapin - (int)(*delayTime);
+    tapout = tapin - (int)(*delayTime + lfo[i]);
     tapout = (tapout + delayBufferSize)&delayBufferMask;
     
     delayBuffer[tapin] = samples[i];
     
-    output[i] = delayBuffer[tapout];
+    //dc blocking filter
+    dcBlock = delayBuffer[tapout] - dc1 + 0.995 * dc2;
+    dc1 = delayBuffer[tapout];
+    dc2 = dcBlock;
+    
+    output[i] = dcBlock;
     
   }
   

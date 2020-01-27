@@ -38,7 +38,6 @@ void allPass::setup(int cSamplerate, int cNumSamples){
   delayBufferSize = nextPowerOfTwo(samplerate/4);
   delayBufferMask = delayBufferSize-1;
   
-  delete[] delayBuffer;
   delayBuffer = new float[delayBufferSize];
   
   for(auto i = 0; i < delayBufferSize; i++){
@@ -54,7 +53,7 @@ void allPass::process_samples(float *samples, float *output , float *lfo,float *
     tapin&=delayBufferMask;
     
     //set delay time
-    tapout =  tapin - (int)(*color);
+    tapout =  tapin - (int)(*color + lfo[i]);
     tapout = (tapout + delayBufferSize)&delayBufferMask;
     
     delayBuffer[tapin] = samples[i] + delayBuffer[tapout] * *colorGain;

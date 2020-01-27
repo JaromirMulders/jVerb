@@ -58,14 +58,14 @@ void LFO::oscGen(float *passOutput,float *sizeOutput ,float *fq, float *depth){
     fqCounter += frac;
     
     //one pole filter lfo
-    //float lfoOut = history * 0.999 + wave * 0.001;
-    //history = lfoOut;
+    float lfoOut = history * 0.999 + wave * 0.001;
+    history = lfoOut;
     
-    wave*= *depth;
+    lfoOut*= *depth;
     
     //send to output and multiply by the buffersize of the allpass filters and delays
-    passOutput[i] = wave * ((float)samplerate * 0.015);
-    sizeOutput[i] = wave * ((float)samplerate * 0.25);
+    passOutput[i] = lfoOut * ((float)samplerate * 0.015);
+    sizeOutput[i] = lfoOut * ((float)samplerate * 0.25);
   }
   
 }

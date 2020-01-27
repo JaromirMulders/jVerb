@@ -21,8 +21,13 @@ private:
   
   float* delayBuffer;
 
+  float dcBlock;
+  float dc1;
+  float dc2;
+  
   //==============================================================================
   int samplerate;
   int numSamples;
+
   
 };

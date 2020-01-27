@@ -9,7 +9,7 @@ JVerbAudioProcessorEditor::JVerbAudioProcessorEditor (JVerbAudioProcessor& p)
     // editor's size to whatever you need it to be.
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (1000, 500);
+    setSize(1000, 500);
 
     inputSliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, INPUT_ID, inputSlider);
     outputSliderVal = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState, OUTPUT_ID, outputSlider);
