@@ -24,6 +24,8 @@ private:
   float dcBlock;
   float dc1;
   float dc2;
+  float oldDelaytime;
+
   
   //==============================================================================
   int samplerate;

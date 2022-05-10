@@ -37,6 +37,10 @@
 #define LFOWAVEFORM_NAME "Waveform"
 #define ZERO_ID "zero"
 #define ZERO_NAME " "
+#define FILTERSELECT_ID "filterselect"
+#define FILTERSELECT_NAME "Filter Select"
+#define LFOSELECT_ID "lfoselect"
+#define LFOSELECT_NAME "LFO Select"
 
 #define cFdnChanAmnt 4
 #define cPi          3.14159265359
@@ -124,7 +128,9 @@ public:
     int oldSamplerate;
     
     //==============================================================================
+    float oldSize;
     
+  
     void scaleParams();
 private:
   

@@ -9,7 +9,7 @@ public:
   
   void setup(int cSamplerate, int cNumSamples);
   float tanhXdX(float x);
-  void process_samples(float *samples, float *output,float *frequency);
+  void process_samples(float *samples, float *output,float *frequency, int *type);
   
 private:
   float zi;
@@ -17,6 +17,7 @@ private:
   float s1;
   float s2;
   float s3;
+  float history;
   
   int samplerate;
   int numSamples;

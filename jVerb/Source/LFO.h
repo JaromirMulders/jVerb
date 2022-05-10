@@ -14,9 +14,10 @@ public:
   LFO();
   ~LFO();
   
-  void oscGen(float *passOutput,float *sizeOutput ,float *fq, float *depth);
-  void makeTable(double shape);
+  void oscGen(float *passOutput,float *sizeOutput ,float *fq, float *depth, int *waveform);
+  void makeTable(int shape);
   void setup(int cSamplerate, int cNumSamples);
+  
   
 private:
   float  waveTable[cTableSize];

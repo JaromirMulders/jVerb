@@ -55,11 +55,16 @@ void Delay::process_samples(float *samples, float *output,float *lfo, float *del
   
   for(auto i = 0; i < numSamples; i++){
     
+    float dTime = oldDelaytime * 0.9995 + *delayTime * 0.0005;
+    oldDelaytime = dTime;
+    
     tapin++;
     tapin&=delayBufferMask;
     
+    
+    
     //set delay time
-    tapout = tapin - (int)(*delayTime + lfo[i]);
+    tapout = tapin - (int)(dTime + lfo[i]);
     tapout = (tapout + delayBufferSize)&delayBufferMask;
     
     delayBuffer[tapin] = samples[i];

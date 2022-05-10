@@ -2,16 +2,8 @@
 
 LFO::LFO() //constructor
 {
-  for(int i = 0; i < cTableSize; i++){ //fill waveTable with sinewave
-    waveTable[i] = sin((float)i/(float)cTableSize * cTwoPi);
-    /*
-    float f = 1.;
-    if(((float)i/(float)cTableSize) > 0.5){
-      f = -1.;
-    }
-    waveTable[i] = f;
-    */
-  }
+  //generate table with sine wave
+  makeTable(1);
   
   tableMask = cTableSize-1;
   fqCounter = 0;
@@ -29,9 +21,30 @@ LFO::~LFO(){
 
 
 
-void LFO::makeTable(double shape){
+void LFO::makeTable(int shape){
   
-}
+  static int oldShape = 0;
+  
+  if(oldShape != shape){
+  
+    if( shape == 1){
+      for(int i = 0; i < cTableSize; i++){ //fill waveTable with sinewave
+        waveTable[i] = sin((float)i/(float)cTableSize * cTwoPi);
+      }//for
+    }else if(shape == 3){
+      for(int i = 0; i < cTableSize; i++){ //fill waveTable with sinewave
+        float f = 1.;
+        if(((float)i/(float)cTableSize) > 0.5){
+          f = -1.;
+        }//if
+        waveTable[i] = f;
+      }//for
+    }
+    
+    oldShape = shape;
+  }//if
+  
+}//make table
 
 void LFO::setup(int cSamplerate, int cNumSamples){
   samplerate = cSamplerate;
@@ -39,9 +52,11 @@ void LFO::setup(int cSamplerate, int cNumSamples){
 
 }
 
-void LFO::oscGen(float *passOutput,float *sizeOutput ,float *fq, float *depth){
+void LFO::oscGen(float *passOutput,float *sizeOutput ,float *fq, float *depth, int *waveform){
   
   for(int i = 0; i < numSamples; i++){
+    makeTable(*waveform);
+    
     frac = (float)cTableSize * *fq / (float)samplerate; //calculate frequency
 
     fqCounter = fmod(fqCounter,(float)cTableSize);

@@ -18,6 +18,7 @@ private:
   long delayBufferMask;
   
   float* delayBuffer;
+  float oldColor;
   
   //==============================================================================
   int samplerate;

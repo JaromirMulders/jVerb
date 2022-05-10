@@ -49,11 +49,15 @@ void allPass::process_samples(float *samples, float *output , float *lfo,float *
  
   for(auto i = 0; i < numSamples; i++){
     
+    
+    float dColor = oldColor * 0.9995 + *color * 0.0005;
+    oldColor = dColor;
+    
     tapin++;
     tapin&=delayBufferMask;
     
     //set delay time
-    tapout =  tapin - (int)(*color + lfo[i]);
+    tapout =  tapin - (int)(dColor + lfo[i]);
     tapout = (tapout + delayBufferSize)&delayBufferMask;
     
     delayBuffer[tapin] = samples[i] + delayBuffer[tapout] * *colorGain;
